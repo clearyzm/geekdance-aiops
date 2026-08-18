@@ -1,0 +1,36 @@
+{
+  "name": "geekdance-ai-ops",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @geekdance/api --filter @geekdance/worker --filter @geekdance/web dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm --filter @geekdance/shared build && pnpm -r --if-present test",
+    "test:stage5:mock": "node scripts/smoke-stage5.mjs",
+    "diagnose:wechat": "node scripts/diagnose-wechat.mjs",
+    "test:stage6:mock": "node scripts/smoke-stage6.mjs",
+    "test:stage7:mock": "node scripts/smoke-stage7.mjs",
+    "test:stage9:mock": "node scripts/smoke-stage9.mjs",
+    "test:isolated": "bash scripts/run-isolated-regression.sh",
+    "format:check": "prettier --check .",
+    "test:xhs-extension": "node extensions/xiaohongshu-draft-uploader/test.mjs",
+    "docker:build": "docker build --target app -t geekdance-ai-ops/app:local .",
+    "docker:up": "bash scripts/docker-run-local.sh",
+    "docker:down": "docker rm -f geekdance-app",
+    "docker:logs": "docker logs -f --tail=150 geekdance-app",
+    "prod:check": "bash deploy/scripts/preflight.sh",
+    "prod:deploy": "bash deploy/scripts/deploy.sh",
+    "prod:health": "bash deploy/scripts/healthcheck.sh",
+    "prod:backup": "bash deploy/scripts/backup.sh",
+    "prod:cleanup-test-data": "bash deploy/scripts/cleanup-test-data.sh",
+    "test:stage8:offline": "bash deploy/scripts/smoke-stage8.sh",
+    "check:public-assets": "sh deploy/scripts/check-public-asset-route.sh",
+    "skills:sync": "node scripts/sync-content-skill-templates.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}

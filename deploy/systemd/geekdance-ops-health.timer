@@ -1,0 +1,12 @@
+[Unit]
+Description=Check GeekDance AI Ops every five minutes
+
+[Timer]
+OnBootSec=3m
+OnUnitActiveSec=5m
+AccuracySec=30s
+Persistent=true
+Unit=geekdance-ops-health.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,458 @@
+name: ${COMPOSE_PROJECT_NAME:-geekdance-ai-ops-prod}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
+x-app-security: &app-security
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  storage-init:
+    image: alpine:3.22
+    restart: "no"
+    network_mode: none
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    command:
+      - sh
+      - -ec
+      - |
+        chown -R 1000:1000 /data/assets
+        chmod 0750 /data/assets
+        find /data/assets -type f -exec chmod 0644 {} +
+        chown -R 10001:10001 /models
+        chmod 0750 /models
+    volumes:
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/data/assets
+      - rembg_data:/models
+    logging: *default-logging
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+      - /run/postgresql:size=16m,nosuid
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 2g
+    cpus: 1.5
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    user: redis
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep -q PONG
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      TZ: ${TZ:-Asia/Shanghai}
+    mem_limit: 768m
+    cpus: 0.75
+    logging: *default-logging
+
+  api:
+    image: ${IMAGE_REPOSITORY:-geekdance-ai-ops}/api:${IMAGE_TAG:-initial}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        APP_RELEASE: ${IMAGE_TAG:-initial}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APP_RELEASE: ${IMAGE_TAG:-initial}
+      API_PORT: "4000"
+      TRUST_PROXY_HOPS: "2"
+      APP_ORIGIN: ${APP_ORIGIN:?APP_ORIGIN is required}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?BOOTSTRAP_ADMIN_EMAIL is required}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-系统管理员}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?BOOTSTRAP_ADMIN_PASSWORD is required}
+      CONTENT_QUEUE_NAME: ${CONTENT_QUEUE_NAME:-content-jobs}
+      AUTOMATION_QUEUE_NAME: ${AUTOMATION_QUEUE_NAME:-automation-jobs}
+      IMAGE_QUEUE_NAME: ${IMAGE_QUEUE_NAME:-image-jobs}
+      ASSET_STORAGE_DIR: /data/assets
+      ASSET_PUBLIC_SECRET: ${ASSET_PUBLIC_SECRET:?ASSET_PUBLIC_SECRET is required}
+      ASSET_ACCEL_REDIRECT: "true"
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_PREFIX: ${OSS_PREFIX:-ai-ops}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      CONTENT_ENGINE_MODE: ${CONTENT_ENGINE_MODE:-openai}
+      IMAGE_PROVIDER_MODE: ${IMAGE_PROVIDER_MODE:-openai}
+      OPENAI_TEXT_MODEL: ${OPENAI_TEXT_MODEL:-gpt-5.6-sol}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-gpt-image-2}
+      OPENROUTER_TEXT_MODEL: ${OPENROUTER_TEXT_MODEL:-qwen/qwen3.7-plus}
+      OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-openai/gpt-5.4-image-2}
+      OFFICIAL_PUBLISHER_MODE: ${OFFICIAL_PUBLISHER_MODE:-live}
+      OFFICIAL_BASE_URL: ${OFFICIAL_BASE_URL:-https://www.geekdance.cn}
+      OFFICIAL_ALLOW_PROD: ${OFFICIAL_ALLOW_PROD:-false}
+      OFFICIAL_ADMIN_TOKEN: ${OFFICIAL_ADMIN_TOKEN:-}
+      OFFICIAL_ADMIN_USERNAME: ${OFFICIAL_ADMIN_USERNAME:-}
+      OFFICIAL_ADMIN_PASSWORD: ${OFFICIAL_ADMIN_PASSWORD:-}
+      WECHAT_PUBLISHER_MODE: ${WECHAT_PUBLISHER_MODE:-live}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/data/assets
+    networks:
+      - backend
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    <<: *app-security
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    stop_grace_period: 45s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 1g
+    cpus: 1.0
+    logging: *default-logging
+
+  image-worker:
+    image: ${IMAGE_REPOSITORY:-geekdance-ai-ops}/image-worker:${IMAGE_TAG:-initial}
+    build:
+      context: services/image-worker
+      dockerfile: Dockerfile
+      args:
+        APP_RELEASE: ${IMAGE_TAG:-initial}
+    restart: unless-stopped
+    environment:
+      APP_RELEASE: ${IMAGE_TAG:-initial}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - rembg_data:/home/appuser/.u2net
+    networks:
+      - backend
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+    <<: *app-security
+    tmpfs:
+      - /tmp:size=256m,noexec,nosuid
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 3g
+    cpus: 2.0
+    logging: *default-logging
+
+  worker:
+    image: ${IMAGE_REPOSITORY:-geekdance-ai-ops}/worker:${IMAGE_TAG:-initial}
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+      args:
+        APP_RELEASE: ${IMAGE_TAG:-initial}
+    restart: unless-stopped
+    environment:
+      APP_RELEASE: ${IMAGE_TAG:-initial}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      CONTENT_QUEUE_NAME: ${CONTENT_QUEUE_NAME:-content-jobs}
+      AUTOMATION_QUEUE_NAME: ${AUTOMATION_QUEUE_NAME:-automation-jobs}
+      IMAGE_QUEUE_NAME: ${IMAGE_QUEUE_NAME:-image-jobs}
+      ASSET_STORAGE_DIR: /data/assets
+      IMAGE_SERVICE_URL: http://image-worker:8000
+      IMAGE_PROVIDER_MODE: ${IMAGE_PROVIDER_MODE:-openai}
+      CONTENT_ENGINE_MODE: ${CONTENT_ENGINE_MODE:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_IMAGE_API_KEY: ${OPENAI_IMAGE_API_KEY:-}
+      OPENAI_IMAGE_BASE_URL: ${OPENAI_IMAGE_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-gpt-image-2}
+      OPENAI_IMAGE_ALLOWED_HOSTS: ${OPENAI_IMAGE_ALLOWED_HOSTS:-api.openai.com,.openai.com,.oaistatic.com}
+      OPENAI_TEXT_MODEL: ${OPENAI_TEXT_MODEL:-gpt-5.6-sol}
+      OPENAI_RESEARCH_FALLBACK_MODEL: ${OPENAI_RESEARCH_FALLBACK_MODEL:-gpt-5.4}
+      OPENAI_RESEARCH_MODEL: ${OPENAI_RESEARCH_MODEL:-}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-medium}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_TEXT_API_KEY: ${OPENROUTER_TEXT_API_KEY:-}
+      OPENROUTER_IMAGE_API_KEY: ${OPENROUTER_IMAGE_API_KEY:-}
+      OPENROUTER_TEXT_BASE_URL: ${OPENROUTER_TEXT_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_IMAGE_BASE_URL: ${OPENROUTER_IMAGE_BASE_URL:-https://openrouter.ai}
+      OPENROUTER_TEXT_MODEL: ${OPENROUTER_TEXT_MODEL:-qwen/qwen3.7-plus}
+      OPENROUTER_TEXT_FALLBACK_MODELS: ${OPENROUTER_TEXT_FALLBACK_MODELS:-qwen/qwen3.7-plus,qwen/qwen3.5-plus-20260420,deepseek/deepseek-v4-pro}
+      OPENROUTER_TEXT_PROVIDER_ORDER: ${OPENROUTER_TEXT_PROVIDER_ORDER:-}
+      OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-openai/gpt-5.4-image-2}
+      OPENROUTER_TEXT_TIMEOUT_MS: ${OPENROUTER_TEXT_TIMEOUT_MS:-240000}
+      OPENROUTER_IMAGE_ALLOWED_HOSTS: ${OPENROUTER_IMAGE_ALLOWED_HOSTS:-openrouter.ai,.openai.com,.oaistatic.com}
+      ASSET_PUBLIC_BASE_URL: ${ASSET_PUBLIC_BASE_URL:-https://aiops.geekdance.cn/api/public/assets}
+      ASSET_PUBLIC_SECRET: ${ASSET_PUBLIC_SECRET:?ASSET_PUBLIC_SECRET is required}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_PREFIX: ${OSS_PREFIX:-ai-ops}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      GEEKDANCE_LOGO_PATH: apps/web/public/brand/geekdance-logo.png
+      GEEKDANCE_ARTICLE_ILLUSTRATION_LOGO_PATH: apps/web/public/brand/geekdance-article-illustration-logo.png
+      GEEKHOME_MATERIAL_MCP_URL: ${GEEKHOME_MATERIAL_MCP_URL:-https://home.geekdance.app/api/public/mcp/material}
+      GEEKHOME_MATERIAL_TOKEN: ${GEEKHOME_MATERIAL_TOKEN:-}
+      OFFICIAL_PUBLISHER_MODE: ${OFFICIAL_PUBLISHER_MODE:-live}
+      OFFICIAL_BASE_URL: ${OFFICIAL_BASE_URL:-https://www.geekdance.cn}
+      OFFICIAL_ALLOW_PROD: ${OFFICIAL_ALLOW_PROD:-false}
+      OFFICIAL_ADMIN_TOKEN: ${OFFICIAL_ADMIN_TOKEN:-}
+      OFFICIAL_ADMIN_USERNAME: ${OFFICIAL_ADMIN_USERNAME:-}
+      OFFICIAL_ADMIN_PASSWORD: ${OFFICIAL_ADMIN_PASSWORD:-}
+      OFFICIAL_UPLOAD_DIR: ${OFFICIAL_UPLOAD_DIR:-ai-generated/blogs}
+      OFFICIAL_IMAGE_ALLOWED_HOSTS: ${OFFICIAL_IMAGE_ALLOWED_HOSTS:-home.geekdance.app,.aliyuncs.com,.geekdance.cn}
+      WECHAT_PUBLISHER_MODE: ${WECHAT_PUBLISHER_MODE:-live}
+      WECHAT_ALLOW_PROD: ${WECHAT_ALLOW_PROD:-false}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      WECHAT_API_BASE_URL: ${WECHAT_API_BASE_URL:-https://api.weixin.qq.com}
+      WECHAT_AUTHOR: ${WECHAT_AUTHOR:-极客跳动}
+      WECHAT_CONTENT_SOURCE_URL: ${WECHAT_CONTENT_SOURCE_URL:-https://www.geekdance.cn}
+      WECHAT_IMAGE_ALLOWED_HOSTS: ${WECHAT_IMAGE_ALLOWED_HOSTS:-home.geekdance.app,.aliyuncs.com,.geekdance.cn}
+      WECHAT_PROMO_BOARD_PATH: apps/web/public/brand/geekdance-promo-board.png
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/data/assets
+    networks:
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+      image-worker:
+        condition: service_healthy
+    <<: *app-security
+    tmpfs:
+      - /tmp:size=256m,noexec,nosuid
+    stop_grace_period: 90s
+    mem_limit: 2g
+    cpus: 2.0
+    logging: *default-logging
+
+  web:
+    image: ${IMAGE_REPOSITORY:-geekdance-ai-ops}/web:${IMAGE_TAG:-initial}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_INTERNAL_URL: http://api:4000
+        APP_RELEASE: ${IMAGE_TAG:-initial}
+    restart: unless-stopped
+    environment:
+      APP_RELEASE: ${IMAGE_TAG:-initial}
+      API_INTERNAL_URL: http://api:4000
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      TZ: ${TZ:-Asia/Shanghai}
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+    <<: *app-security
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 1g
+    cpus: 1.0
+    logging: *default-logging
+
+  nginx:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/state/letsencrypt:/etc/letsencrypt:ro
+      - ./deploy/state/certbot-www:/var/www/certbot:ro
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/data/assets:ro
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    <<: *app-security
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,uid=101,gid=101
+      - /var/cache/nginx:size=64m,noexec,nosuid,uid=101,gid=101
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:8080/healthz | grep -q ok
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *default-logging
+
+  certbot:
+    image: certbot/certbot:v4.0.0
+    profiles:
+      - ops
+    volumes:
+      - ./deploy/state/letsencrypt:/etc/letsencrypt
+      - ./deploy/state/certbot-www:/var/www/certbot
+    networks:
+      - frontend
+    entrypoint: certbot
+
+  backup-helper:
+    image: alpine:3.22
+    profiles:
+      - ops
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    volumes:
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/source/assets:ro
+      - redis_data:/source/redis:ro
+
+  restore-helper:
+    image: alpine:3.22
+    profiles:
+      - ops
+    network_mode: none
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${ASSET_HOST_DIR:-/var/lib/geekdance-ai-ops/assets}:/restore/assets
+      - redis_data:/restore/redis
+
+  egress-check:
+    image: curlimages/curl:8.16.0
+    profiles:
+      - ops
+    networks:
+      - backend
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --fail
+      - --silent
+      - --show-error
+      - --max-time
+      - "15"
+      - https://api.ipify.org
+
+networks:
+  frontend:
+    internal: false
+  backend:
+    internal: false
+
+volumes:
+  postgres_data:
+  redis_data:
+  rembg_data:

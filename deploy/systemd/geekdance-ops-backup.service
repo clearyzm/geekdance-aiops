@@ -1,0 +1,17 @@
+[Unit]
+Description=GeekDance AI Ops encrypted backup
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=geekdance
+Group=docker
+WorkingDirectory=/opt/geekdance-ai-ops
+Environment=ENV_FILE=/opt/geekdance-ai-ops/.env.production
+ExecStart=/opt/geekdance-ai-ops/deploy/scripts/backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

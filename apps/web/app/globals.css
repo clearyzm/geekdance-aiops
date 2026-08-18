@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --brand-red: #e60012;
+  --brand-red-deep: #b90012;
+  --brand-red-soft: #fff1f2;
+  --brand-red-border: #f6b8be;
+  --ink: #17171a;
+  --muted: #666a73;
+  --canvas: #f7f7f8;
+  --card: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--canvas);
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  font-family:
+    "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+::selection {
+  color: white;
+  background: var(--brand-red);
+}
+
+.gd-card {
+  border: 1px solid #e8e8eb;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 12px 40px rgba(23, 23, 26, 0.045);
+}
+.gd-grid {
+  background-image:
+    linear-gradient(#ededf0 1px, transparent 1px),
+    linear-gradient(90deg, #ededf0 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.focus-ring:focus-visible {
+  outline: 3px solid rgba(230, 0, 18, 0.2);
+  outline-offset: 2px;
+}

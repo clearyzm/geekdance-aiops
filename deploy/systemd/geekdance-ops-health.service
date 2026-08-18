@@ -1,0 +1,14 @@
+[Unit]
+Description=GeekDance AI Ops production health check
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=geekdance
+Group=docker
+WorkingDirectory=/opt/geekdance-ai-ops
+Environment=ENV_FILE=/opt/geekdance-ai-ops/.env.production
+ExecStart=/opt/geekdance-ai-ops/deploy/scripts/healthcheck.sh
+PrivateTmp=true
+NoNewPrivileges=true

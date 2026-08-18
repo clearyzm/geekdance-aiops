@@ -1,0 +1,11 @@
+[Unit]
+Description=Run GeekDance AI Ops backup every day
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=10m
+Unit=geekdance-ops-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,168 @@
+name: geekdance-ai-ops
+
+services:
+  asset-init:
+    image: postgres:17-alpine
+    restart: "no"
+    command:
+      [
+        "sh",
+        "-c",
+        "chown -R 1000:1000 /data/assets && chmod 0750 /data/assets && chown -R 10001:10001 /models && chmod 0750 /models",
+      ]
+    volumes:
+      - asset_data:/data/assets
+      - rembg_data:/models
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-geekdance_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-geekdance_ops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geekdance-local-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-geekdance_ops} -d ${POSTGRES_DB:-geekdance_ops}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Production remains the default. Local HTTP browser tests can opt in with
+      # API_NODE_ENV=development so Secure session/CSRF cookies are not dropped.
+      NODE_ENV: ${API_NODE_ENV:-production}
+      # Keep the production origin from .env by default while allowing an
+      # explicit loopback origin for local browser verification.
+      APP_ORIGIN: ${API_APP_ORIGIN:-${APP_ORIGIN}}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geekdance_ops}:${POSTGRES_PASSWORD:-geekdance-local-password}@postgres:5432/${POSTGRES_DB:-geekdance_ops}
+      REDIS_URL: redis://redis:6379
+      WECHAT_PUBLISHER_MODE: ${WECHAT_PUBLISHER_MODE:-mock}
+      WECHAT_ALLOW_PROD: ${WECHAT_ALLOW_PROD:-false}
+      API_PORT: 4000
+      ASSET_STORAGE_DIR: /data/assets
+    volumes:
+      - asset_data:/data/assets
+    depends_on:
+      asset-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:4000:4000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geekdance_ops}:${POSTGRES_PASSWORD:-geekdance-local-password}@postgres:5432/${POSTGRES_DB:-geekdance_ops}
+      REDIS_URL: redis://redis:6379
+      CONTENT_ENGINE_MODE: ${CONTENT_ENGINE_MODE:-mock}
+      WECHAT_PUBLISHER_MODE: ${WECHAT_PUBLISHER_MODE:-mock}
+      WECHAT_ALLOW_PROD: ${WECHAT_ALLOW_PROD:-false}
+      ASSET_STORAGE_DIR: /data/assets
+      IMAGE_SERVICE_URL: http://image-worker:8000
+      IMAGE_PROVIDER_MODE: ${IMAGE_PROVIDER_MODE:-mock}
+    volumes:
+      - asset_data:/data/assets
+    depends_on:
+      api:
+        condition: service_healthy
+      image-worker:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  image-worker:
+    build:
+      context: services/image-worker
+    restart: unless-stopped
+    volumes:
+      - rembg_data:/home/appuser/.u2net
+    depends_on:
+      asset-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  postgres_data:
+  redis_data:
+  asset_data:
+  rembg_data:

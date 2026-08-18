@@ -1,0 +1,79 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: #17171a;
+  background: #f7f7f8;
+}
+
+body {
+  width: 350px;
+  margin: 0;
+}
+
+main {
+  padding: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #e60012;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.hint,
+.guard,
+#status {
+  color: #666a73;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+label {
+  display: block;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 11px;
+  border: 1px solid #dddddf;
+  border-radius: 9px;
+  background: white;
+}
+
+button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px;
+  border: 0;
+  border-radius: 9px;
+  color: white;
+  background: #e60012;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button.secondary {
+  color: #17171a;
+  background: #e7e7ea;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.guard {
+  padding-top: 10px;
+  border-top: 1px solid #e7e7ea;
+}

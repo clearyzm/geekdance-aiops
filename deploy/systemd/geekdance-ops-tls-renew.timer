@@ -1,0 +1,11 @@
+[Unit]
+Description=Check GeekDance AI Ops TLS renewal twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:15:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=30m
+Unit=geekdance-ops-tls-renew.service
+
+[Install]
+WantedBy=timers.target

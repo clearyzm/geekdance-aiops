@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "极客跳动 · 多平台草稿助手",
+  "version": "1.4.0",
+  "description": "将运营中心已复核内容投放到小红书、知乎、今日头条、百家号和 LinkedIn 的指定账号，支持草稿与受控正式发布。",
+  "permissions": ["storage", "tabs", "scripting", "alarms"],
+  "host_permissions": [
+    "https://aiops.geekdance.cn/*",
+    "https://home.geekdance.app/*",
+    "https://*.aliyuncs.com/*",
+    "https://*.geekdance.cn/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://creator.xiaohongshu.com/*",
+    "https://www.zhihu.com/*",
+    "https://zhuanlan.zhihu.com/*",
+    "https://mp.toutiao.com/*",
+    "https://baijiahao.baidu.com/*",
+    "https://www.linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://aiops.geekdance.cn/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["website-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://creator.xiaohongshu.com/*",
+        "https://www.zhihu.com/*",
+        "https://zhuanlan.zhihu.com/*",
+        "https://mp.toutiao.com/*",
+        "https://baijiahao.baidu.com/*",
+        "https://www.linkedin.com/*"
+      ],
+      "js": ["site-adapter.js", "article-site-adapter.js", "content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
