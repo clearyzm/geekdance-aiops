@@ -1,6 +1,7 @@
 # 极客跳动 AI 运营中心｜原型索引
 
 - 原型状态：探索原型，待 P1 / PA1 / I1 Review 后进入 P2
+- GitHub 直接查看的完整 PNG 图集：`design/PROTOTYPE-GALLERY.md`
 - 完整本地 HTML 原型：`design/aiops-platform-prototype.html`
 - V1.3 七渠道变更以 HTML 原型为当前权威；当前包含原有 20 个核心 Frame，以及本轮新增的 28 个详细页面/状态 Frame，共 48 个。
 - Pencil 编辑源：编辑器托管画布 `aiops-platform.pen`（当前未在仓库内物化，归档以 HTML / PNG / PDF 为准）
@@ -11,28 +12,28 @@
 
 ## 核心 Frame
 
-| Frame | Node ID | 导出图 |
-| --- | --- | --- |
-| 设计基础 | gD0Tf | `gD0Tf.png` |
-| 工作台总览 | oDq2S | `oDq2S.png` |
-| 内容生产 / 通识文章 | E2HHGI | `E2HHGI.png` |
-| 内容生产 / 候选标题 | F4uEG | `F4uEG.png` |
-| 任务详情 / 生成中 | kEOov | `kEOov.png` |
-| 人工复核 / 内容复核 | j8Nwb | `j8Nwb.png` |
-| 人工复核 / 渠道结果 | i3TtCf | `i3TtCf.png` |
-| 内容资产 | EggD3 | `EggD3.png` |
-| 图片工坊 | dzSOP | `dzSOP.png` |
-| 公众号默认结尾 | x9K1l | `x9K1l.png` |
-| 渠道与扩展管理 | RXunK | `RXunK.png` |
-| 多账号发布 / 创建批次 | u1ekB | `u1ekB.png` |
-| 多账号发布 / 部分成功 | cQIgN | `cQIgN.png` |
-| 定时任务 | rFWoy | `rFWoy.png` |
-| 成员管理 | G6HYhb | `G6HYhb.png` |
-| 系统设置 | KpTEh | `KpTEh.png` |
-| 移动端人工复核 | p0x3vO | `p0x3vO.png` |
-| 扩展弹窗 / Ready | cocTh | `cocTh.png` |
-| 扩展弹窗 / Action Required | WDDkx | `WDDkx.png` |
-| 全页面与状态覆盖地图 | VJIsC | `VJIsC.png` |
+| Frame                      | Node ID | 导出图       |
+| -------------------------- | ------- | ------------ |
+| 设计基础                   | gD0Tf   | `gD0Tf.png`  |
+| 工作台总览                 | oDq2S   | `oDq2S.png`  |
+| 内容生产 / 通识文章        | E2HHGI  | `E2HHGI.png` |
+| 内容生产 / 候选标题        | F4uEG   | `F4uEG.png`  |
+| 任务详情 / 生成中          | kEOov   | `kEOov.png`  |
+| 人工复核 / 内容复核        | j8Nwb   | `j8Nwb.png`  |
+| 人工复核 / 渠道结果        | i3TtCf  | `i3TtCf.png` |
+| 内容资产                   | EggD3   | `EggD3.png`  |
+| 图片工坊                   | dzSOP   | `dzSOP.png`  |
+| 公众号默认结尾             | x9K1l   | `x9K1l.png`  |
+| 渠道与扩展管理             | RXunK   | `RXunK.png`  |
+| 多账号发布 / 创建批次      | u1ekB   | `u1ekB.png`  |
+| 多账号发布 / 部分成功      | cQIgN   | `cQIgN.png`  |
+| 定时任务                   | rFWoy   | `rFWoy.png`  |
+| 成员管理                   | G6HYhb  | `G6HYhb.png` |
+| 系统设置                   | KpTEh   | `KpTEh.png`  |
+| 移动端人工复核             | p0x3vO  | `p0x3vO.png` |
+| 扩展弹窗 / Ready           | cocTh   | `cocTh.png`  |
+| 扩展弹窗 / Action Required | WDDkx   | `WDDkx.png`  |
+| 全页面与状态覆盖地图       | VJIsC   | `VJIsC.png`  |
 
 ## 阅读方式
 
@@ -44,22 +45,22 @@
 
 ## 本轮新增 28 个详细 Frame
 
-| 功能域 | 新增页面/状态 |
-| --- | --- |
-| 登录与账号 | 登录默认、登录错误/锁定、首次改密、账号菜单与退出确认 |
-| 工作台 | 渠道降级与恢复建议 |
-| 内容生产 | 项目案例、附件逐项上传与 iCloud/格式错误 |
-| 任务中心 | 团队任务列表、空/搜索无结果/接口错误、已完成详情与全部输入回看 |
-| 人工复核 | 待处理列表、已处理历史、公众号组合封面、小红书图文复核 |
-| 回收站 | 有数据、空状态 |
-| 内容资产 | 上传进度、格式错误、详情、重命名与删除 |
-| 图片工坊 | 八工具总览、人物背景融合运行/失败/恢复 |
-| 公众号结尾 | 运营成员只读与手机预览 |
-| 渠道管理 | 团队账号、未安装/版本旧/未连接恢复 |
-| 多账号发布 | 正式发布强确认、逐账号执行与结果不明确 |
-| 定时任务 | 七渠道计划新建/编辑 |
-| 成员与设置 | 新建成员、个人设置、系统健康和安全边界 |
-| 系统状态 | Loading、Empty、Error、NoPermission、Disabled、Confirm、Success、Conflict |
+| 功能域     | 新增页面/状态                                                             |
+| ---------- | ------------------------------------------------------------------------- |
+| 登录与账号 | 登录默认、登录错误/锁定、首次改密、账号菜单与退出确认                     |
+| 工作台     | 渠道降级与恢复建议                                                        |
+| 内容生产   | 项目案例、附件逐项上传与 iCloud/格式错误                                  |
+| 任务中心   | 团队任务列表、空/搜索无结果/接口错误、已完成详情与全部输入回看            |
+| 人工复核   | 待处理列表、已处理历史、公众号组合封面、小红书图文复核                    |
+| 回收站     | 有数据、空状态                                                            |
+| 内容资产   | 上传进度、格式错误、详情、重命名与删除                                    |
+| 图片工坊   | 八工具总览、人物背景融合运行/失败/恢复                                    |
+| 公众号结尾 | 运营成员只读与手机预览                                                    |
+| 渠道管理   | 团队账号、未安装/版本旧/未连接恢复                                        |
+| 多账号发布 | 正式发布强确认、逐账号执行与结果不明确                                    |
+| 定时任务   | 七渠道计划新建/编辑                                                       |
+| 成员与设置 | 新建成员、个人设置、系统健康和安全边界                                    |
+| 系统状态   | Loading、Empty、Error、NoPermission、Disabled、Confirm、Success、Conflict |
 
 ## 已确认的产品决策
 
