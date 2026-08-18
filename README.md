@@ -1,63 +1,108 @@
 # 极客跳动 AI 运营中心
 
-面向极客跳动运营团队的内部内容生产与渠道草稿管理平台。当前已接入官网、公众号、小红书、知乎文章、今日头条图文和百家号图文六渠道的内容生产、人工复核、独立排版与草稿准备。
+这是极客跳动团队内部使用的内容运营工作台。它把选题、资料整理、文章生成、配图、人工复核和多渠道投放放在同一条流程里，减少在文档、素材库和各个平台后台之间反复搬运内容的时间。
 
-## 本地启动
+简单来说，一篇内容会经历这几步：
 
-1. 复制 `.env.example` 为 `.env`，在本机填写随机密码和临时管理员密码。
-2. 确认 `.env` 里的 `DATABASE_URL` 和 `REDIS_URL` 指向宿主机 PostgreSQL / Redis。
-3. 按 [Docker Run 启动说明](deploy/README_DOCKER_RUN.md) 构建镜像并用 `docker run` 启动 `app` 容器。
-4. 访问 `http://localhost:3000`。
+> 填写主题和资料 → 选择标题 → 生成各渠道版本 → 人工修改与配图 → 保存草稿或受控发布
 
-所有渠道功能均不正式发布。官网与公众号使用服务端草稿接口；小红书、知乎、今日头条和百家号由每位成员电脑上的公司版 Chrome 扩展复用当前已登录会话。小红书填写完成后由人工点击“暂存离开”；其他三平台只在识别到唯一草稿按钮时自动保存。LinkedIn 为禁用的预留模块。
+内容生成后不会绕过复核直接进入渠道。运营人员可以在复核页修改全文、调整封面和插图、预览不同渠道的实际排版，再决定保存草稿或进入发布流程。
 
-## 生产能力与运行边界
+![内容生产与案例创建原型](design/exports/aiops-platform-complete/content-case.png)
 
-- 生产环境使用 OpenRouter 真实检索/写作与 AI 生图、GeekHome 真实素材搜索、官网草稿接口和微信公众号官方草稿 API；本地开发仍可显式选择 Mock 模式做离线回归。
-- 通识、行业、技术、趋势和公司运营内容可完成全文、配图决策、官网 HTML、公众号 HTML 与质量报告。
-- 内容表单支持 PDF、DOCX、TXT、Markdown、PNG 与 JPG；文本类附件在服务端解析，图片附件在真实内容模式下进入视觉资料流程。附件具备账号归属校验，不能跨运营账号引用。
-- 案例类请求会进入 `manual_review`，预留路由为 `xiaohongshu_case_workflow`，不会虚构客户或项目结果。
-- 官网草稿适配器已通过真实草稿验收。生产写入必须同时满足 `OFFICIAL_ALLOW_PROD=true` 与任务 `confirmDraft=true`，请求载荷固定为 `status=draft`。
-- 微信公众号使用官方 API，正文图片会逐张上传并替换外链；真实草稿需要把服务器固定出口 IP 加入微信白名单。
-- 定时任务按 `Asia/Shanghai` 执行，可选择每日任意时间及官网、公众号或双渠道；新建与预置计划默认停用。
-- 图片工坊支持 OpenRouter AI 生图、透明抠图、Image 2 人物背景融合、比例裁切、精确拼接、AI 创意拼接和官方 Logo 叠加；抠图与确定性处理在本地图片服务执行。
-- `operationId` 提供幂等保护；每名成员最多同时运行 3 个活动任务。
-- 管理员可创建、启停成员；首次登录的临时密码在后端强制修改。运营成员可进入渠道管理下载、连接或停用自己电脑上的多平台草稿助手。
+## 目前覆盖的渠道
 
-## 多平台草稿助手内部分发
+| 渠道         | 内容形态           | 交付方式                         |
+| ------------ | ------------------ | -------------------------------- |
+| 极客跳动官网 | 官网文章、案例文章 | 服务端写入官网草稿               |
+| 微信公众号   | 图文文章           | 微信官方接口写入草稿             |
+| 小红书       | 图文笔记           | 浏览器扩展填写并保存草稿         |
+| 知乎         | 知乎文章           | 浏览器扩展填写并保存草稿         |
+| 今日头条     | 图文文章           | 浏览器扩展填写并保存草稿         |
+| 百家号       | 图文文章           | 浏览器扩展填写并保存草稿         |
+| LinkedIn     | 长文内容           | 浏览器扩展填写草稿或执行受控投放 |
 
-生产构建会把 `extensions/xiaohongshu-draft-uploader` 自动打包为 `/downloads/geekdance-multi-platform-draft-uploader.zip`。每位同事只需安装一次，即可复用小红书、知乎、今日头条和百家号的当前 Chrome 登录态。首次从任务详情保存任意扩展渠道时，网站会自动完成当前电脑连接，不需要复制令牌、接口地址或版本号。完整安装与安全说明见 [扩展文档](extensions/xiaohongshu-draft-uploader/README.md)。
+浏览器渠道复用同事电脑里已经登录的平台账号，不在运营中心保存平台密码、Cookie 或登录态。多账号投放支持草稿与正式发布两种模式；正式发布需要使用已复核内容、明确选择账号并完成二次确认。页面结构、验证码或成功信号不明确时，扩展会停止操作，交给人工处理。
 
-## 安全模式与草稿验收
+## 日常会用到的功能
 
-日常本地开发使用：
+- **内容生产**：支持通识、行业、技术、趋势、公司运营和项目案例等内容类型，可上传 PDF、DOCX、TXT、Markdown 和图片资料，并先生成多个标题供选择。
+- **渠道差异化写作**：官网、公众号、小红书等渠道使用各自的篇幅、结构和排版规则，不是简单复制同一份正文。
+- **人工复核**：在一个完整编辑器里修改文章，在任意位置插入或裁剪图片，并切换查看官网、公众号和其他渠道预览。
+- **智能配图**：根据正文判断值得视觉化的位置，生成 4:3 辅助理解型插图；同一篇文章尽量使用不同的信息结构。也可以检索 GeekHome 素材或上传本地图片。
+- **封面处理**：公众号可把一张真实图片分别裁成 2.35:1 和 1:1，叠加品牌渐变与 GeekDance 字标后合成组合封面；小红书使用独立的 3:4 封面。
+- **公众号结尾**：统一维护关于我们、分割线和精彩推荐，复核时仍可按文章调整。
+- **内容资产与图片工坊**：管理、上传和重命名素材，提供透明抠图、人物与背景融合、自由裁剪、自定义 Logo 叠加和封面文字修改等工具。
+- **任务与自动化**：查看任务最初填写的全部信息、处理失败任务和回收站；定时任务覆盖七个渠道，并继续经过人工复核。
+- **团队与多账号**：每位同事可连接自己的浏览器和平台账号；投放批次逐账号记录结果，单个账号失败不会覆盖其他账号的状态。
 
-```dotenv
-CONTENT_ENGINE_MODE=mock
-OFFICIAL_PUBLISHER_MODE=mock
-OFFICIAL_ALLOW_PROD=false
-WECHAT_PUBLISHER_MODE=mock
-WECHAT_ALLOW_PROD=false
-IMAGE_PROVIDER_MODE=mock
-```
+## 第一次使用
 
-生产环境按 `.env.production.example` 使用 `openrouter` / `live`，并通过 `*_ALLOW_PROD=true`、任务 `confirmDraft=true` 和部署确认门禁共同限制写入。系统不存在正式发布接口。
-
-## 验证命令
+项目使用 pnpm workspace，包含 Web、API、Worker、共享类型、内容引擎和渠道适配器。
 
 ```bash
-pnpm test
-pnpm typecheck
-pnpm build
-pnpm test:stage5:mock
-STAGE6_TEST_REMBG=true pnpm test:stage6:mock
-pnpm test:stage7:mock
-pnpm test:stage8:offline
-docker ps
+corepack enable
+pnpm install --frozen-lockfile
+cp .env.example .env
 ```
 
-`test:stage7:mock` 覆盖双账号、首次改密后端门禁、管理员接口隔离、附件校验与证据追溯、跨账号数据隔离、双渠道独立产物、20 次并发幂等提交、只重试失败渠道和任意每日时间。脚本只产生本地 Mock 草稿，不调用外部渠道。
+然后只在本机的 `.env` 中填写数据库、Redis 和所需服务配置。不要把真实密钥写进示例文件，也不要提交 `.env`。
 
-## 生产部署
+本地开发：
 
-第 8 阶段的 Ubuntu 生产部署工程位于 `docker-compose.production.yml` 和 `deploy/`。它只公开 80/443，包含 HTTPS、只读应用容器、资源限制、日志轮转、固定出口 IP 校验、加密备份、恢复、健康巡检与镜像回滚。完整流程见 `deploy/README_PRODUCTION.md`。
+```bash
+pnpm dev
+```
+
+如需按容器方式启动，参考 [Docker Run 启动说明](deploy/README_DOCKER_RUN.md)。生产部署、备份、恢复和健康检查见 [生产部署说明](deploy/README_PRODUCTION.md)。
+
+## 多平台发布扩展
+
+生产构建会生成统一的公司版扩展包：
+
+```text
+/downloads/geekdance-multi-platform-draft-uploader.zip
+```
+
+同事安装一次即可用于小红书、知乎、今日头条、百家号和 LinkedIn。首次从运营中心执行浏览器渠道任务时，网站会自动完成当前电脑的连接，不需要手工复制令牌或接口地址。
+
+扩展仍依赖平台真实页面，因此平台改版后要重新做 DOM 验收。完整安装和故障处理说明见 [扩展文档](extensions/xiaohongshu-draft-uploader/README.md)。
+
+## 验证
+
+提交前至少运行：
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:xhs-extension
+```
+
+涉及数据库、队列、渠道状态机或完整流程时，再运行隔离回归：
+
+```bash
+pnpm test:isolated
+```
+
+本地 Mock 验证只说明代码链路和状态机通过，不能替代真实账号、真实平台页面和生产接口验收。每次部署后仍应分别检查官网草稿、公众号草稿以及各浏览器渠道的填写和保存结果。
+
+## 产品文档和原型
+
+- [完整 PRD](docs/PRODUCT.md)：产品目标、角色、业务流程、功能模块、渠道规则、异常处理与验收标准
+- [页面交互说明](docs/PAGE-INTERACTIONS.md)：页面字段、按钮、状态和交互规则
+- [项目适配说明](docs/PROJECT-ADAPTATION.md)：业务、品牌、渠道和实现边界
+- [完整交互原型](design/aiops-platform-prototype.html)：可直接在浏览器打开，支持通过 `?frame=<Frame ID>` 查看单个页面
+- [原型页面索引](design/PROTOTYPE-INDEX.md)：页面编号、用途和评审入口
+- [当前项目状态](docs/PROJECT-STATUS.md)：已完成内容、验证证据和仍需真实验收的部分
+
+原型是内部运营后台的完整业务稿，不是营销展示页。它覆盖登录、工作台、内容生产、任务、人工复核、素材、图片工坊、渠道、多账号投放、定时任务、成员、系统设置以及常见加载和错误状态。
+
+## 配置和安全
+
+- 仓库只保留 `.env.example` 与 `.env.production.example`，真实环境变量由部署环境管理。
+- 不要提交密码、Cookie、Token、API Key、AccessKey、Secret、客户资料或生产数据库导出。
+- 正式渠道操作必须保留操作人、内容版本、目标账号和结果记录。
+- 结果不明确时不要自动重试，以免产生重复草稿或重复发布。
+
+如果你只是想了解系统做什么，先看上面的产品文档和原型；如果要本地运行，从 `.env.example` 和 Docker Run 启动说明开始会更直接。
