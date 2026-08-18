@@ -6,13 +6,13 @@
 
 如果你想先了解产品做什么，不需要从代码开始。下面两个入口是这套系统的完整产品说明：
 
-| 入口                                                         | 包含内容                                                                                            |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| **[查看完整 PRD](docs/PRODUCT.md)**                          | 产品背景、目标用户、完整业务流程、功能模块、渠道规则、异常处理和验收标准                            |
-| **[打开完整交互原型](design/aiops-platform-prototype.html)** | 48 个后台页面与状态，覆盖内容生产、人工复核、素材、图片工坊、七渠道、多账号投放、定时任务和系统管理 |
-| [查看原型页面索引](design/PROTOTYPE-INDEX.md)                | 按页面编号查找功能，也可以通过 Frame ID 单独打开指定页面                                            |
+| 入口                                                | 包含内容                                                                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **[查看完整 PRD](docs/PRODUCT.md)**                 | 产品背景、目标用户、完整业务流程、功能模块、渠道规则、异常处理和验收标准                                   |
+| **[查看完整原型图集](design/PROTOTYPE-GALLERY.md)** | 48 张直接显示的 PNG 原型图，覆盖内容生产、人工复核、素材、图片工坊、七渠道、多账号投放、定时任务和系统管理 |
+| [查看原型页面索引](design/PROTOTYPE-INDEX.md)       | 按页面编号查找功能，也可以通过 Frame ID 单独打开指定页面                                                   |
 
-GitHub 会把 HTML 原型显示为源文件。需要实际操作原型时，下载 `design/aiops-platform-prototype.html` 后用浏览器打开即可。
+需要逐页操作时，再下载 [HTML 可交互原型源文件](design/aiops-platform-prototype.html) 并用浏览器打开。
 
 ![极客跳动 AI 运营中心完整原型预览](design/exports/aiops-platform-complete/content-case.png)
 
@@ -104,7 +104,8 @@ pnpm test:isolated
 - [完整 PRD](docs/PRODUCT.md)：产品目标、角色、业务流程、功能模块、渠道规则、异常处理与验收标准
 - [页面交互说明](docs/PAGE-INTERACTIONS.md)：页面字段、按钮、状态和交互规则
 - [项目适配说明](docs/PROJECT-ADAPTATION.md)：业务、品牌、渠道和实现边界
-- [完整交互原型](design/aiops-platform-prototype.html)：可直接在浏览器打开，支持通过 `?frame=<Frame ID>` 查看单个页面
+- [完整原型图集](design/PROTOTYPE-GALLERY.md)：在 GitHub 中直接查看全部 48 张 PNG 页面图
+- [HTML 可交互原型](design/aiops-platform-prototype.html)：下载后用浏览器打开，支持通过 `?frame=<Frame ID>` 查看单个页面
 - [原型页面索引](design/PROTOTYPE-INDEX.md)：页面编号、用途和评审入口
 - [当前项目状态](docs/PROJECT-STATUS.md)：已完成内容、验证证据和仍需真实验收的部分
 
